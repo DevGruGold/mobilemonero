@@ -6,7 +6,6 @@ import { useState, useRef, useEffect } from "react"
 import ImageUploader from "./ImageUploader"
 import Camera from "./Camera"
 import TextToSpeech from "./TextToSpeech"
-import Web3Button from "./Web3Button"
 
 interface ChatProps {
   initialObservation: string
@@ -38,8 +37,6 @@ const translations = {
     voiceOff: "Voice Off",
     appIntro:
       "Welcome to AssisteMae! I can help you with various tasks by analyzing images and providing guidance. You can take photos, upload images, or just chat with me. What can I assist you with today?",
-    donationPrompt:
-      "I hope I was able to help! If you found this service useful, please consider making a small donation to support AssisteMae's development. Thank you!",
   },
   es: {
     newAnalysis: "Nuevo Análisis",
@@ -56,15 +53,7 @@ const translations = {
     voiceOff: "Voz Desactivada",
     appIntro:
       "¡Bienvenido a AssisteMae! Puedo ayudarte con varias tareas analizando imágenes y proporcionando orientación. Puedes tomar fotos, subir imágenes o simplemente chatear conmigo. ¿En qué puedo ayudarte hoy?",
-    donationPrompt:
-      "¡Espero haber podido ayudar! Si encontraste útil este servicio, por favor considera hacer una pequeña donación para apoyar el desarrollo de AssisteMae. ¡Gracias!",
   },
-}
-
-// Keywords that might indicate a conversation is ending
-const endingKeywords = {
-  en: ["thank", "thanks", "bye", "goodbye", "see you", "later", "done", "finished", "complete", "helped"],
-  es: ["gracias", "adios", "nos vemos", "hasta luego", "terminado", "completo", "ayudado", "listo"],
 }
 
 export default function Chat({ initialObservation, initialQuestion, chatTitle, onReset, language }: ChatProps) {
@@ -78,7 +67,6 @@ export default function Chat({ initialObservation, initialQuestion, chatTitle, o
   const [showCamera, setShowCamera] = useState(false)
   const [showUploader, setShowUploader] = useState(false)
   const [autoRead, setAutoRead] = useState(true)
-  const [donationPrompted, setDonationPrompted] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const t = translations[language]
@@ -89,14 +77,6 @@ export default function Chat({ initialObservation, initialQuestion, chatTitle, o
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
-
-  // Check if the message might indicate the conversation is ending
-  const isEndingConversation = (message: string): boolean => {
-    const lowerMessage = message.toLowerCase()
-    const keywords = endingKeywords[language]
-
-    return keywords.some((keyword) => lowerMessage.includes(keyword)) && lowerMessage.length < 100 // Only consider short messages
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,15 +107,6 @@ export default function Chat({ initialObservation, initialQuestion, chatTitle, o
 
       const data = await response.json()
       setMessages((prev) => [...prev, { role: "assistant", content: data.response }])
-
-      // Check if we should prompt for donation
-      if (!donationPrompted && isEndingConversation(userMessage)) {
-        // Wait a moment before sending the donation prompt
-        setTimeout(() => {
-          setMessages((prev) => [...prev, { role: "assistant", content: t.donationPrompt }])
-          setDonationPrompted(true)
-        }, 2000)
-      }
     } catch (error) {
       console.error("Error getting AI response:", error)
       setMessages((prev) => [...prev, { role: "assistant", content: t.errorMessage }])
@@ -361,12 +332,6 @@ export default function Chat({ initialObservation, initialQuestion, chatTitle, o
             </button>
           </div>
         </form>
-
-        {donationPrompted && (
-          <div className="mt-4">
-            <Web3Button language={language} />
-          </div>
-        )}
       </div>
     </div>
   )
