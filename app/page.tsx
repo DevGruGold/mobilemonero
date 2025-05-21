@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Camera from "@/components/Camera"
 import Chat from "@/components/Chat"
+import Web3Button from "@/components/Web3Button"
 import LanguageToggle from "@/components/LanguageToggle"
 import ModelInfo from "@/components/ModelInfo"
 
@@ -129,6 +130,9 @@ export default function Home() {
                     <p className="text-blue-600">{t.analyzing}</p>
                   </div>
                 )}
+                <div className="mt-6">
+                  <Web3Button language={language} />
+                </div>
               </>
             ) : (
               <Chat
