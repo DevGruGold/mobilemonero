@@ -10,6 +10,8 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Set the output directory to "dist" for Vercel deployment
+  distDir: 'dist',
 }
 
 export default nextConfig
