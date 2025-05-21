@@ -1,10 +1,28 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+// Check if API key exists
+const apiKey = process.env.GEMINI_API_KEY
+if (!apiKey) {
+  console.error("GEMINI_API_KEY is not defined in environment variables")
+}
+
+const genAI = new GoogleGenerativeAI(apiKey || "")
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if API key is available
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          error: "API key is not configured",
+          observation: "System configuration error",
+          question: "Please try again later",
+        },
+        { status: 500 },
+      )
+    }
+
     const formData = await req.formData()
     const image = formData.get("image") as Blob | null
     const language = (formData.get("language") as string) || "en"
@@ -21,8 +39,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Update to use Gemini 2.5 Pro model
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" })
+    // Let's try the model that was working before
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
 
     // Updated prompt to include language preference and handle follow-up images
     const prompt = isFollowUp
@@ -100,9 +118,11 @@ export async function POST(req: NextRequest) {
       },
     ]
 
+    console.log("Sending request to Gemini API with model: gemini-1.5-flash")
     const result = await model.generateContent([prompt, ...imageParts])
     const response = await result.response
     const responseText = response.text()
+    console.log("Received response from Gemini API")
 
     try {
       // Extract JSON from the response text (in case there's any text before or after the JSON)
@@ -126,6 +146,11 @@ export async function POST(req: NextRequest) {
     }
   } catch (error) {
     console.error("Error in API route:", error)
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error("Error message:", error.message)
+      console.error("Error stack:", error.stack)
+    }
 
     // Try to extract language from the request
     let language = "en"

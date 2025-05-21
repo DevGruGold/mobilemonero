@@ -4,10 +4,10 @@ interface ModelInfoProps {
 
 const translations = {
   en: {
-    poweredBy: "Powered by Gemini 2.5 Pro",
+    poweredBy: "Powered by Gemini 1.5 Flash",
   },
   es: {
-    poweredBy: "Impulsado por Gemini 2.5 Pro",
+    poweredBy: "Impulsado por Gemini 1.5 Flash",
   },
 }
 

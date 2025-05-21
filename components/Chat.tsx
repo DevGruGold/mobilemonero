@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from "react"
 import ImageUploader from "./ImageUploader"
 import Camera from "./Camera"
 import TextToSpeech from "./TextToSpeech"
+import DonationOptions from "./DonationOptions"
 
 interface ChatProps {
   initialObservation: string
@@ -33,7 +34,12 @@ const translations = {
     showUploader: "Upload Image",
     hideUploader: "Hide Uploader",
     processingImage: "Processing your image...",
-    autoReadResponses: "Auto-read responses",
+    voiceOn: "Voice On",
+    voiceOff: "Voice Off",
+    appIntro:
+      "Welcome to AssisteMae! I can help you with various tasks by analyzing images and providing guidance. You can take photos, upload images, or just chat with me. What can I assist you with today?",
+    donationPrompt:
+      "I hope I was able to help! If you found this service useful, please consider making a small donation to support AssisteMae's development. Thank you!",
   },
   es: {
     newAnalysis: "Nuevo Análisis",
@@ -46,12 +52,24 @@ const translations = {
     showUploader: "Subir Imagen",
     hideUploader: "Ocultar Subida",
     processingImage: "Procesando tu imagen...",
-    autoReadResponses: "Leer respuestas automáticamente",
+    voiceOn: "Voz Activada",
+    voiceOff: "Voz Desactivada",
+    appIntro:
+      "¡Bienvenido a AssisteMae! Puedo ayudarte con varias tareas analizando imágenes y proporcionando orientación. Puedes tomar fotos, subir imágenes o simplemente chatear conmigo. ¿En qué puedo ayudarte hoy?",
+    donationPrompt:
+      "¡Espero haber podido ayudar! Si encontraste útil este servicio, por favor considera hacer una pequeña donación para apoyar el desarrollo de AssisteMae. ¡Gracias!",
   },
+}
+
+// Keywords that might indicate a conversation is ending
+const endingKeywords = {
+  en: ["thank", "thanks", "bye", "goodbye", "see you", "later", "done", "finished", "complete", "helped"],
+  es: ["gracias", "adios", "nos vemos", "hasta luego", "terminado", "completo", "ayudado", "listo"],
 }
 
 export default function Chat({ initialObservation, initialQuestion, chatTitle, onReset, language }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([
+    { role: "assistant", content: translations[language].appIntro },
     { role: "assistant", content: initialObservation },
     { role: "assistant", content: initialQuestion },
   ])
@@ -59,7 +77,8 @@ export default function Chat({ initialObservation, initialQuestion, chatTitle, o
   const [isProcessing, setIsProcessing] = useState(false)
   const [showCamera, setShowCamera] = useState(false)
   const [showUploader, setShowUploader] = useState(false)
-  const [autoRead, setAutoRead] = useState(false)
+  const [autoRead, setAutoRead] = useState(true)
+  const [donationPrompted, setDonationPrompted] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const t = translations[language]
@@ -70,6 +89,14 @@ export default function Chat({ initialObservation, initialQuestion, chatTitle, o
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  // Check if the message might indicate the conversation is ending
+  const isEndingConversation = (message: string): boolean => {
+    const lowerMessage = message.toLowerCase()
+    const keywords = endingKeywords[language]
+
+    return keywords.some((keyword) => lowerMessage.includes(keyword)) && lowerMessage.length < 100 // Only consider short messages
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,6 +127,15 @@ export default function Chat({ initialObservation, initialQuestion, chatTitle, o
 
       const data = await response.json()
       setMessages((prev) => [...prev, { role: "assistant", content: data.response }])
+
+      // Check if we should prompt for donation
+      if (!donationPrompted && isEndingConversation(userMessage)) {
+        // Wait a moment before sending the donation prompt
+        setTimeout(() => {
+          setMessages((prev) => [...prev, { role: "assistant", content: t.donationPrompt }])
+          setDonationPrompted(true)
+        }, 2000)
+      }
     } catch (error) {
       console.error("Error getting AI response:", error)
       setMessages((prev) => [...prev, { role: "assistant", content: t.errorMessage }])
@@ -256,18 +292,55 @@ export default function Chat({ initialObservation, initialQuestion, chatTitle, o
               {showUploader ? t.hideUploader : t.showUploader}
             </button>
           </div>
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="auto-read"
-              checked={autoRead}
-              onChange={(e) => setAutoRead(e.target.checked)}
-              className="mr-2"
-            />
-            <label htmlFor="auto-read" className="text-sm text-gray-600">
-              {t.autoReadResponses}
-            </label>
-          </div>
+          <button
+            onClick={() => setAutoRead(!autoRead)}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-sm ${
+              autoRead ? "bg-indigo-100 text-indigo-800" : "bg-gray-200 text-gray-600"
+            }`}
+            title={autoRead ? t.voiceOff : t.voiceOn}
+          >
+            {autoRead ? (
+              <>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                </svg>
+                <span className="hidden sm:inline">{t.voiceOn}</span>
+              </>
+            ) : (
+              <>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
+                  <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path>
+                  <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path>
+                  <line x1="12" y1="19" x2="12" y2="23"></line>
+                  <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+                <span className="hidden sm:inline">{t.voiceOff}</span>
+              </>
+            )}
+          </button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="flex gap-2">
@@ -288,6 +361,12 @@ export default function Chat({ initialObservation, initialQuestion, chatTitle, o
             </button>
           </div>
         </form>
+
+        {donationPrompted && (
+          <div className="mt-4">
+            <DonationOptions language={language} />
+          </div>
+        )}
       </div>
     </div>
   )

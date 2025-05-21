@@ -130,6 +130,9 @@ export default function Home() {
                     <p className="text-blue-600">{t.analyzing}</p>
                   </div>
                 )}
+                <div className="mt-6">
+                  <Web3Button language={language} />
+                </div>
               </>
             ) : (
               <Chat
@@ -140,10 +143,6 @@ export default function Home() {
                 language={language}
               />
             )}
-
-            <div className="mt-6">
-              <Web3Button />
-            </div>
           </div>
         </div>
       </div>

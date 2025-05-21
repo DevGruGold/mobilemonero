@@ -1,10 +1,26 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+// Check if API key exists
+const apiKey = process.env.GEMINI_API_KEY
+if (!apiKey) {
+  console.error("GEMINI_API_KEY is not defined in environment variables")
+}
+
+const genAI = new GoogleGenerativeAI(apiKey || "")
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if API key is available
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          title: "Assistance Session",
+        },
+        { status: 500 },
+      )
+    }
+
     const { observation, language = "en" } = await req.json()
 
     if (!observation) {
@@ -13,8 +29,8 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Update to use Gemini 2.5 Pro model
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" })
+    // Use the model that was working before
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
 
     const prompt =
       language === "en"
@@ -33,9 +49,11 @@ export async function POST(req: NextRequest) {
         Responde en español.
       `
 
+    console.log("Sending request to Gemini API with model: gemini-1.5-flash")
     const result = await model.generateContent(prompt)
     const response = await result.response
     const title = response.text().trim()
+    console.log("Received response from Gemini API")
 
     // Limit title length and remove quotes if present
     const cleanTitle = title.replace(/^["']|["']$/g, "").substring(0, 50)
@@ -45,7 +63,19 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     console.error("Error generating title:", error)
-    const { language = "en" } = req.json ? await req.json() : { language: "en" }
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error("Error message:", error.message)
+      console.error("Error stack:", error.stack)
+    }
+
+    let language = "en"
+    try {
+      const { language: reqLanguage = "en" } = await req.json()
+      language = reqLanguage
+    } catch {
+      // If we can't get the language, default to English
+    }
 
     return NextResponse.json({
       title: language === "en" ? "Assistance Session" : "Sesión de Asistencia",

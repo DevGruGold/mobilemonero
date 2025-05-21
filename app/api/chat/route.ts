@@ -1,18 +1,35 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+// Check if API key exists
+const apiKey = process.env.GEMINI_API_KEY
+if (!apiKey) {
+  console.error("GEMINI_API_KEY is not defined in environment variables")
+}
+
+const genAI = new GoogleGenerativeAI(apiKey || "")
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if API key is available
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          error: "API key is not configured",
+          response: "System configuration error. Please try again later.",
+        },
+        { status: 500 },
+      )
+    }
+
     const { messages, context, language = "en" } = await req.json()
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "Invalid messages format" }, { status: 400 })
     }
 
-    // Update to use Gemini 2.5 Pro model
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" })
+    // Use the model that was working before
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
 
     // Format the conversation history for the model
     const formattedMessages = messages
@@ -49,14 +66,28 @@ export async function POST(req: NextRequest) {
         Responde en español.
       `
 
+    console.log("Sending request to Gemini API with model: gemini-1.5-flash")
     const result = await model.generateContent(prompt)
     const response = await result.response
     const responseText = response.text()
+    console.log("Received response from Gemini API")
 
     return NextResponse.json({ response: responseText })
   } catch (error) {
     console.error("Error in chat API:", error)
-    const { language = "en" } = req.json ? await req.json() : { language: "en" }
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error("Error message:", error.message)
+      console.error("Error stack:", error.stack)
+    }
+
+    let language = "en"
+    try {
+      const { language: reqLanguage = "en" } = await req.json()
+      language = reqLanguage
+    } catch {
+      // If we can't get the language, default to English
+    }
 
     const errorMessage =
       language === "en"
